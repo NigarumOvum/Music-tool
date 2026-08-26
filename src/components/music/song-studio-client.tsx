@@ -615,25 +615,33 @@ export function SongStudioClient() {
             </div>
 
             {promptTemplates.length > 0 && activePromptTemplate ? (
-              <div className="panel glass-shine animate-fade-up rounded-[1.75rem] p-5 space-y-3">
-                <div className="eyebrow">AI prompts</div>
-                <select
-                  className="field"
-                  value={selectedPromptTemplateId}
-                  onChange={(event) => setSelectedPromptTemplateId(event.target.value)}
-                >
-                  {promptTemplates.map((template) => (
-                    <option key={template.id} value={template.id}>{template.name}</option>
-                  ))}
-                </select>
-                <PromptRunnerPanel
-                  templateId={activePromptTemplate.id}
-                  templateName={activePromptTemplate.name}
-                  targetLabel={activePromptTemplate.targetField || "song field"}
-                  defaultSongId={selectedSongId}
-                  onApplied={() => void selectSong(selectedSongId)}
-                />
-              </div>
+              <details className="panel glass-shine animate-fade-up rounded-[1.25rem] group">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
+                  <span className="flex items-center gap-2">
+                    <span className="eyebrow">AI prompts</span>
+                    <span className="text-xs text-[var(--color-sand-2)]">Enhance this song with Ollama</span>
+                  </span>
+                  <ChevronUp className="h-4 w-4 shrink-0 text-[var(--color-sand-2)] transition-transform group-open:rotate-180" />
+                </summary>
+                <div className="space-y-3 border-t border-[var(--color-stroke)] px-4 pb-4 pt-3">
+                  <select
+                    className="field"
+                    value={selectedPromptTemplateId}
+                    onChange={(event) => setSelectedPromptTemplateId(event.target.value)}
+                  >
+                    {promptTemplates.map((template) => (
+                      <option key={template.id} value={template.id}>{template.name}</option>
+                    ))}
+                  </select>
+                  <PromptRunnerPanel
+                    templateId={activePromptTemplate.id}
+                    templateName={activePromptTemplate.name}
+                    targetLabel={activePromptTemplate.targetField || "song field"}
+                    defaultSongId={selectedSongId}
+                    onApplied={() => void selectSong(selectedSongId)}
+                  />
+                </div>
+              </details>
             ) : null}
 
             <AnimatePresence mode="wait">

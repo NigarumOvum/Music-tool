@@ -28,7 +28,9 @@
   --color-warning-surface: rgba(249, 115, 22, 0.12);
   --color-warning-border: rgba(249, 115, 22, 0.26);
   --shadow-panel: 0 24px 80px rgba(15, 23, 42, 0.12);
-  --shadow-soft: 0 12px 30px rgba(15, 23, 42, 0.08);
+  --shadow-soft: 0 8px 22px rgba(15, 23, 42, 0.07);
+  --radius-panel: 1.25rem;
+  --space-page: 1rem;
   --color-modal-surface: #f8fafc;
   --color-modal-backdrop: rgba(15, 23, 42, 0.72);
 }
@@ -56,8 +58,8 @@ html[data-theme="dark"] {
   --color-success-border: rgba(134, 239, 172, 0.24);
   --color-warning-surface: rgba(253, 186, 116, 0.12);
   --color-warning-border: rgba(253, 186, 116, 0.22);
-  --shadow-panel: 0 32px 120px rgba(0, 0, 0, 0.45);
-  --shadow-soft: 0 16px 40px rgba(0, 0, 0, 0.3);
+  --shadow-panel: 0 24px 90px rgba(0, 0, 0, 0.4);
+  --shadow-soft: 0 10px 28px rgba(0, 0, 0, 0.24);
   --color-modal-surface: #0f172a;
   --color-modal-backdrop: rgba(2, 6, 23, 0.82);
 }
@@ -124,6 +126,7 @@ a {
 .panel {
   background: linear-gradient(145deg, var(--color-surface-strong), var(--color-surface));
   border: 1px solid var(--color-border);
+  border-radius: var(--radius-panel);
   box-shadow: var(--shadow-panel);
   backdrop-filter: blur(28px) saturate(160%);
   -webkit-backdrop-filter: blur(28px) saturate(160%);
@@ -200,11 +203,11 @@ html[data-theme="dark"] .panel-interactive:hover {
 
 .field {
   width: 100%;
-  border-radius: 1rem;
+  border-radius: 0.75rem;
   border: 1px solid var(--color-border);
   background: linear-gradient(180deg, var(--color-surface-strong), var(--color-surface-soft));
   color: var(--foreground);
-  padding: 0.9rem 1rem;
+  padding: 0.72rem 0.85rem;
   outline: none;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24);
   transition: border-color 150ms ease, transform 150ms ease, background-color 150ms ease;
@@ -229,7 +232,7 @@ html[data-theme="dark"] .panel-interactive:hover {
 
 .page-grid {
   display: grid;
-  gap: 1.5rem;
+  gap: var(--space-page);
 }
 
 @media (min-width: 1024px) {

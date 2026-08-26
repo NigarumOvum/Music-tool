@@ -64,9 +64,9 @@ export async function AppShell({ title, eyebrow, description, children, aside, p
   const navLinks = visibleNavItems.map(({ href, label, icon }) => ({ href, label, icon }));
 
   return (
-    <div className="grain min-h-screen px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
-        <header className="panel glass-shine sticky top-4 z-20 rounded-[2rem] p-4 sm:p-5 animate-fade-up">
+    <div className="grain min-h-screen px-3 py-4 sm:px-5 lg:px-6">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
+        <header className="panel glass-shine sticky top-3 z-20 rounded-[1.25rem] p-3 sm:p-4 animate-fade-up">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex items-center justify-between gap-3 xl:min-w-[220px] xl:justify-start">
               <Link href="/" className="flex min-w-0 items-center gap-3">
@@ -112,10 +112,10 @@ export async function AppShell({ title, eyebrow, description, children, aside, p
           </div>
         </header>
 
-        <main className={aside ? "page-grid" : "space-y-6"}>
-          {aside ? <aside className="panel rounded-[1.75rem] p-4">{aside}</aside> : null}
-          <section className="space-y-6">
-            <div className="flex flex-col gap-1 px-4 sm:px-6">
+        <main className={aside ? "page-grid" : "space-y-4"}>
+          {aside ? <aside className="panel rounded-[1.25rem] p-3">{aside}</aside> : null}
+          <section className="space-y-4">
+            <div className="flex flex-col gap-1 px-2 sm:px-4">
               <div className="flex items-baseline gap-3">
                 <span className="eyebrow text-[0.65rem] opacity-60 uppercase tracking-[0.2em]">{eyebrow}</span>
                 <h1 className="text-xl font-black tracking-tight text-[var(--color-foreground)]">{title}</h1>
