@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Book, Layers, Music, Play, RotateCcw, Search, Sparkles } from "lucide-react";
+import { Book, Layers, Music, Play, RotateCcw, Search, Sparkles, Piano } from "lucide-react";
 
+import { CollapsibleCard } from "@/components/collapsible-card";
 import { PianoKeyboard } from "@/components/music/piano-keyboard";
 import { useAudio } from "@/components/music/audio-provider";
 import { KEYBOARD_VOICES, playKeyboardNote, playKeyboardNotes, type KeyboardVoice } from "@/lib/music/keyboard-synth";
@@ -167,30 +168,73 @@ export function TheoryLabClient() {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="panel relative space-y-5 overflow-hidden rounded-3xl border border-white/5 bg-zinc-900/40 p-6 backdrop-blur-md group">
-          <div className="absolute right-0 top-0 p-4 opacity-10 transition-opacity group-hover:opacity-30">
-            <Book className="h-24 w-24" />
-          </div>
-          <div className="relative z-10 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="glass-pill bg-[var(--color-brass)]/10 p-2 text-[var(--color-brass)]">
-                <Music className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="text-xl font-black uppercase italic tracking-tighter">Scale Explorer</h3>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Modal analysis active</p>
-              </div>
-            </div>
+      {/* 1. Master Keyboard & Visualizer (Important: Open by default) */}
+      <CollapsibleCard
+        defaultOpen={true}
+        title="Interactive Master Keyboard"
+        subtitle={`Highlighting ${highlightMode.toUpperCase()} mode · ${KEYBOARD_VOICES.find((item) => item.id === keyboardVoice)?.label}`}
+        eyebrow="Synth & Fretboard Lab"
+        icon={<Piano className="h-5 w-5 text-[var(--color-copper)]" />}
+        headerActions={
+          <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => { setHighlightMode("scale"); playNotes(scaleNotes); }}
-              className="glass-pill px-4 py-2 text-[10px] font-black uppercase tracking-widest shadow-lg transition-all hover:bg-[var(--color-brass)] hover:text-black"
+              onClick={() => setHighlightMode(highlightMode === "scale" ? "none" : "scale")}
+              className={`rounded-full border px-3 py-1 text-[10px] font-black transition-all ${
+                highlightMode === "scale"
+                  ? "border-[var(--color-copper)] bg-[var(--color-copper)] text-white shadow-lg"
+                  : "border-white/10 opacity-60 hover:opacity-100"
+              }`}
             >
-              <Play className="mr-1 inline h-3 w-3 fill-current" /> Play scale
+              Scale mode
+            </button>
+            <button
+              type="button"
+              onClick={() => setHighlightMode(highlightMode === "chord" ? "none" : "chord")}
+              className={`rounded-full border px-3 py-1 text-[10px] font-black transition-all ${
+                highlightMode === "chord"
+                  ? "border-[var(--color-copper)] bg-[var(--color-copper)] text-white shadow-lg"
+                  : "border-white/10 opacity-60 hover:opacity-100"
+              }`}
+            >
+              Chord mode
             </button>
           </div>
-          <div className="relative z-10 flex gap-2">
+        }
+      >
+        <PianoKeyboard
+          activeNotes={activeNotes}
+          startOctave={keyboardOctave}
+          voice={keyboardVoice}
+          onVoiceChange={setKeyboardVoice}
+          showInstrumentSelector
+          onNotePlay={(note, frequency) => {
+            const midi = 69 + 12 * Math.log2(frequency / 440);
+            setKeyboardOctave(Math.max(1, Math.min(6, Math.floor(midi / 12) - 1)));
+            playFrequency(frequency);
+          }}
+        />
+      </CollapsibleCard>
+
+      {/* 2. Scale Explorer & Diatonic Triads (Important: Open by default) */}
+      <CollapsibleCard
+        defaultOpen={true}
+        title={`Scale Explorer · ${scaleRoot} ${scaleType}`}
+        subtitle={`${scaleNotes.length} notes in modal structure with diatonic chords`}
+        eyebrow="Modal Analysis"
+        icon={<Music className="h-5 w-5 text-[var(--color-brass)]" />}
+        headerActions={
+          <button
+            type="button"
+            onClick={() => { setHighlightMode("scale"); playNotes(scaleNotes); }}
+            className="glass-pill px-4 py-1.5 text-[10px] font-black uppercase tracking-widest shadow-sm transition-all hover:bg-[var(--color-brass)] hover:text-black"
+          >
+            <Play className="mr-1 inline h-3 w-3 fill-current" /> Play Scale
+          </button>
+        }
+      >
+        <div className="space-y-5">
+          <div className="flex gap-2">
             <select value={scaleRoot} onChange={(e) => setScaleRoot(e.target.value)} className="field flex-1">
               {CHROMATIC.map((n) => <option key={n} value={n}>{n}</option>)}
             </select>
@@ -198,13 +242,14 @@ export function TheoryLabClient() {
               {Object.keys(SCALES).map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
-          <div className="relative z-10 flex flex-wrap gap-2">
+
+          <div className="flex flex-wrap gap-2">
             {scaleNotes.map((n, i) => (
               <button
                 key={`${n}-${i}`}
                 type="button"
                 onClick={() => playNoteAtOctave(n)}
-                className="glass-pill flex min-w-[50px] flex-col items-center border-white/10 bg-white/5 px-4 py-2"
+                className="glass-pill flex min-w-[50px] flex-col items-center border-white/10 bg-white/5 px-4 py-2 hover:border-[var(--color-brass)]"
               >
                 <span className="text-[8px] font-black uppercase opacity-40">{i + 1}</span>
                 <span className="text-sm font-black">{n}</span>
@@ -212,49 +257,61 @@ export function TheoryLabClient() {
               </button>
             ))}
           </div>
-          <div className="relative z-10 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
-            <Search className="h-3 w-3" />
-            {scaleRoot} {scaleType} · {scaleNotes.length} notes
+
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-soft)] p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <span className="eyebrow text-[0.62rem]">Diatonic Chords</span>
+              <span className="text-[10px] text-[var(--color-sand-2)]">Click triad to load & hear</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {diatonicTriads(scaleNotes).map((triad, degree) => {
+                const quality = triadQuality(triad[0], triad[1], triad[2]);
+                const chordTypeName = quality === "M" ? "Major" : quality === "m" ? "Minor" : quality === "dim" ? "Diminished" : quality === "aug" ? "Augmented" : "";
+                return (
+                  <button
+                    key={`${triad.join("-")}-${degree}`}
+                    type="button"
+                    onClick={() => {
+                      if (chordTypeName) {
+                        setChordRoot(triad[0]);
+                        setChordType(chordTypeName);
+                        setInversion(0);
+                      }
+                      setHighlightMode("chord");
+                      playKeyboardNotes(getAudioContext(), triad.map((n) => noteFrequency(n, keyboardOctave)), keyboardVoice, 90);
+                    }}
+                    className="glass-pill flex flex-col items-start border-white/10 bg-white/5 px-4 py-2 transition hover:border-[var(--color-berry)]"
+                    title={triad.join(" ")}
+                  >
+                    <span className="text-[10px] font-black uppercase text-[var(--color-berry)]">{romanNumeral(degree, quality)}</span>
+                    <span className="text-sm font-black">{triad[0]}{quality === "m" ? "m" : quality === "dim" ? "°" : quality === "aug" ? "+" : ""}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
+      </CollapsibleCard>
 
-        <div className="panel relative space-y-5 overflow-hidden rounded-3xl border border-white/5 bg-zinc-900/40 p-6 backdrop-blur-md group">
-          <div className="absolute right-0 top-0 p-4 opacity-10 transition-opacity group-hover:opacity-30">
-            <Sparkles className="h-24 w-24" />
-          </div>
-          <div className="relative z-10 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-3">
-              <div className="glass-pill bg-[var(--color-berry)]/10 p-2 text-[var(--color-berry)]">
-                <Layers className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="text-xl font-black uppercase italic tracking-tighter">Chord Constructor</h3>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
-                  {inversion === 0 ? "Root position" : `Inversion ${inversion}`}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <select
-                value={inversion}
-                onChange={(e) => setInversion(Number(e.target.value))}
-                className="field !w-auto !px-2 !py-1 text-[10px]"
-                aria-label="Chord inversion"
-              >
-                {Array.from({ length: Math.max(1, CHORDS[chordType].length) }, (_, i) => (
-                  <option key={i} value={i}>{i === 0 ? "Root" : `${i}${i === 1 ? "st" : i === 2 ? "nd" : "rd"} inv.`}</option>
-                ))}
-              </select>
-              <button
-                type="button"
-                onClick={() => { setHighlightMode("chord"); playKeyboardNotes(getAudioContext(), chordFrequencies, keyboardVoice, 90); }}
-                className="glass-pill px-4 py-2 text-[10px] font-black uppercase tracking-widest shadow-lg transition-all hover:bg-[var(--color-berry)] hover:text-black"
-              >
-                <Play className="mr-1 inline h-3 w-3 fill-current" /> Arpeggiate
-              </button>
-            </div>
-          </div>
-          <div className="relative z-10 flex gap-2">
+      {/* 3. Chord Constructor & Inversions (Less critical: Closed by default) */}
+      <CollapsibleCard
+        defaultOpen={false}
+        title="Chord Constructor & Inversions"
+        subtitle={`${chordRoot} ${chordType} · ${inversion === 0 ? "Root position" : `Inversion ${inversion}`}`}
+        eyebrow="Harmony Builder"
+        icon={<Layers className="h-5 w-5 text-[var(--color-berry)]" />}
+        headerActions={
+          <button
+            type="button"
+            onClick={() => { setHighlightMode("chord"); playKeyboardNotes(getAudioContext(), chordFrequencies, keyboardVoice, 90); }}
+            className="glass-pill px-4 py-1.5 text-[10px] font-black uppercase tracking-widest shadow-sm transition-all hover:bg-[var(--color-berry)] hover:text-black"
+          >
+            <Play className="mr-1 inline h-3 w-3 fill-current" /> Arpeggiate
+          </button>
+        }
+      >
+        <div className="space-y-4">
+          <div className="flex flex-wrap gap-2">
             <select
               value={chordRoot}
               onChange={(e) => { setChordRoot(e.target.value); setInversion(0); }}
@@ -269,8 +326,19 @@ export function TheoryLabClient() {
             >
               {Object.keys(CHORDS).map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
+            <select
+              value={inversion}
+              onChange={(e) => setInversion(Number(e.target.value))}
+              className="field w-auto"
+              aria-label="Chord inversion"
+            >
+              {Array.from({ length: Math.max(1, CHORDS[chordType].length) }, (_, i) => (
+                <option key={i} value={i}>{i === 0 ? "Root Position" : `${i}${i === 1 ? "st" : i === 2 ? "nd" : "rd"} Inversion`}</option>
+              ))}
+            </select>
           </div>
-          <div className="relative z-10 flex flex-wrap gap-2">
+
+          <div className="flex flex-wrap gap-2">
             {chordNotes.map((n, i) => (
               <button
                 key={`${n}-${i}`}
@@ -288,99 +356,8 @@ export function TheoryLabClient() {
               </button>
             ))}
           </div>
-          <div className="relative z-10 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
-            <RotateCcw className="h-3 w-3" />
-            Tap a note chip to hear it
-          </div>
         </div>
-      </div>
-
-      <div className="panel rounded-[2.5rem] border border-white/5 bg-zinc-950/60 p-8 backdrop-blur-xl">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 px-2">
-          <div>
-            <h4 className="text-sm font-black uppercase tracking-widest opacity-40">Diatonic chords · {scaleRoot} {scaleType}</h4>
-            <p className="text-xs font-bold text-zinc-500">
-              Triads built from every degree of the scale. Click one to load it into the Chord Constructor and hear it.
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2 px-2">
-          {diatonicTriads(scaleNotes).map((triad, degree) => {
-            const quality = triadQuality(triad[0], triad[1], triad[2]);
-            const chordTypeName = quality === "M" ? "Major" : quality === "m" ? "Minor" : quality === "dim" ? "Diminished" : quality === "aug" ? "Augmented" : "";
-            return (
-              <button
-                key={`${triad.join("-")}-${degree}`}
-                type="button"
-                onClick={() => {
-                  if (chordTypeName) {
-                    setChordRoot(triad[0]);
-                    setChordType(chordTypeName);
-                    setInversion(0);
-                  }
-                  setHighlightMode("chord");
-                  playKeyboardNotes(getAudioContext(), triad.map((n) => noteFrequency(n, keyboardOctave)), keyboardVoice, 90);
-                }}
-                className="glass-pill flex flex-col items-start border-white/10 bg-white/5 px-4 py-2 transition hover:border-[var(--color-berry)]"
-                title={triad.join(" ")}
-              >
-                <span className="text-[10px] font-black uppercase text-[var(--color-berry)]">{romanNumeral(degree, quality)}</span>
-                <span className="text-sm font-black">{triad[0]}{quality === "m" ? "m" : quality === "dim" ? "°" : quality === "aug" ? "+" : ""}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="panel rounded-[2.5rem] border border-white/5 bg-zinc-950/60 p-8 backdrop-blur-xl">
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 px-2">
-          <div>
-            <h4 className="text-sm font-black uppercase tracking-widest opacity-40">Interactive Master Keyboard</h4>
-            <p className="text-xs font-bold text-zinc-500">
-              Highlighting: <span className="uppercase text-[var(--color-copper)]">{highlightMode}</span>
-              {" · "}
-              {KEYBOARD_VOICES.find((item) => item.id === keyboardVoice)?.label}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => setHighlightMode(highlightMode === "scale" ? "none" : "scale")}
-              className={`rounded-full border px-3 py-1 text-[10px] font-black transition-all ${
-                highlightMode === "scale"
-                  ? "border-[var(--color-copper)] bg-[var(--color-copper)] text-white shadow-lg"
-                  : "border-white/10 opacity-40 hover:opacity-100"
-              }`}
-            >
-              Scale mode
-            </button>
-            <button
-              type="button"
-              onClick={() => setHighlightMode(highlightMode === "chord" ? "none" : "chord")}
-              className={`rounded-full border px-3 py-1 text-[10px] font-black transition-all ${
-                highlightMode === "chord"
-                  ? "border-[var(--color-copper)] bg-[var(--color-copper)] text-white shadow-lg"
-                  : "border-white/10 opacity-40 hover:opacity-100"
-              }`}
-            >
-              Chord mode
-            </button>
-          </div>
-        </div>
-
-        <PianoKeyboard
-          activeNotes={activeNotes}
-          startOctave={keyboardOctave}
-          voice={keyboardVoice}
-          onVoiceChange={setKeyboardVoice}
-          showInstrumentSelector
-          onNotePlay={(note, frequency) => {
-            const midi = 69 + 12 * Math.log2(frequency / 440);
-            setKeyboardOctave(Math.max(1, Math.min(6, Math.floor(midi / 12) - 1)));
-            playFrequency(frequency);
-          }}
-        />
-      </div>
+      </CollapsibleCard>
     </div>
   );
 }

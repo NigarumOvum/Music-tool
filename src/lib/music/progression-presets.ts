@@ -383,7 +383,7 @@ export function transposeRoot(root: string, fromKey: string, toKey: string) {
   return NOTES[(rootIdx + semitones) % 12];
 }
 
-export function transposePreset(preset: ProgressionPreset, targetKey: string): ProgressionChord[] {
+export function transposePreset(preset: Pick<ProgressionPreset, "baseKey" | "chords">, targetKey: string): ProgressionChord[] {
   return preset.chords.map((chord) => ({
     root: transposeRoot(chord.root, preset.baseKey, targetKey),
     quality: chord.quality,

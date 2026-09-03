@@ -130,3 +130,43 @@ export interface MusicPartitureRecord {
   updatedAt: string;
 }
 
+export interface MusicProjectRecord {
+  id: string;
+  userId: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  color: string | null;
+  isSharedWithAll: boolean;
+  memberCount: number;
+  songCount: number;
+  members: MusicProjectMemberRecord[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MusicProjectMemberRecord {
+  id: string;
+  projectId: string;
+  userId: string;
+  userName?: string | null;
+  userEmail?: string;
+  role: "owner" | "editor" | "viewer";
+  createdAt: string;
+}
+
+export interface MusicProjectDraftInput {
+  name: string;
+  slug?: string | null;
+  description?: string | null;
+  color?: string | null;
+  isSharedWithAll?: boolean;
+  memberUserIds?: string[];
+}
+
+export interface MusicCollaboratorUser {
+  id: string;
+  name: string | null;
+  email: string;
+}
+

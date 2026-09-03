@@ -546,12 +546,12 @@ export function SongStudioClient() {
           </div>
         ) : selectedSong ? (
           <>
-            <div className="panel glass-shine rounded-[1.75rem] p-5">
-              <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="panel glass-shine rounded-[1.25rem] p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <div className="eyebrow">Song editor</div>
-                  <h2 className="mt-2 text-3xl font-black tracking-tight">{selectedSong.song.title}</h2>
-                  <p className="mt-1 text-xs text-[var(--color-sand-2)]">
+                  <h2 className="mt-1 text-2xl font-black tracking-tight">{selectedSong.song.title}</h2>
+                  <p className="mt-0.5 text-[11px] text-[var(--color-sand-2)]">
                     Last saved {formatSavedAt(selectedSong.song.saved_at)}
                     {isDirty ? " · Unsaved changes" : " · Up to date"}
                   </p>
@@ -596,7 +596,7 @@ export function SongStudioClient() {
                 </div>
               </div>
 
-              <div className="mt-5 flex flex-wrap gap-2">
+              <div className="mt-3 flex flex-wrap gap-1.5">
                 {editorTabs.map((tab) => {
                   const Icon = tab.icon;
                   return (
@@ -613,36 +613,6 @@ export function SongStudioClient() {
                 })}
               </div>
             </div>
-
-            {promptTemplates.length > 0 && activePromptTemplate ? (
-              <details className="panel glass-shine animate-fade-up rounded-[1.25rem] group">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
-                  <span className="flex items-center gap-2">
-                    <span className="eyebrow">AI prompts</span>
-                    <span className="text-xs text-[var(--color-sand-2)]">Enhance this song with Ollama</span>
-                  </span>
-                  <ChevronUp className="h-4 w-4 shrink-0 text-[var(--color-sand-2)] transition-transform group-open:rotate-180" />
-                </summary>
-                <div className="space-y-3 border-t border-[var(--color-stroke)] px-4 pb-4 pt-3">
-                  <select
-                    className="field"
-                    value={selectedPromptTemplateId}
-                    onChange={(event) => setSelectedPromptTemplateId(event.target.value)}
-                  >
-                    {promptTemplates.map((template) => (
-                      <option key={template.id} value={template.id}>{template.name}</option>
-                    ))}
-                  </select>
-                  <PromptRunnerPanel
-                    templateId={activePromptTemplate.id}
-                    templateName={activePromptTemplate.name}
-                    targetLabel={activePromptTemplate.targetField || "song field"}
-                    defaultSongId={selectedSongId}
-                    onApplied={() => void selectSong(selectedSongId)}
-                  />
-                </div>
-              </details>
-            ) : null}
 
             <AnimatePresence mode="wait">
               <motion.div
@@ -924,6 +894,36 @@ export function SongStudioClient() {
                 ) : null}
               </motion.div>
             </AnimatePresence>
+
+            {promptTemplates.length > 0 && activePromptTemplate ? (
+              <details className="panel glass-shine animate-fade-up rounded-[1.25rem] group">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
+                  <span className="flex items-center gap-2">
+                    <span className="eyebrow">AI prompts</span>
+                    <span className="text-xs text-[var(--color-sand-2)]">Enhance this song with Ollama</span>
+                  </span>
+                  <ChevronUp className="h-4 w-4 shrink-0 text-[var(--color-sand-2)] transition-transform group-open:rotate-180" />
+                </summary>
+                <div className="space-y-3 border-t border-[var(--color-stroke)] px-4 pb-4 pt-3">
+                  <select
+                    className="field"
+                    value={selectedPromptTemplateId}
+                    onChange={(event) => setSelectedPromptTemplateId(event.target.value)}
+                  >
+                    {promptTemplates.map((template) => (
+                      <option key={template.id} value={template.id}>{template.name}</option>
+                    ))}
+                  </select>
+                  <PromptRunnerPanel
+                    templateId={activePromptTemplate.id}
+                    templateName={activePromptTemplate.name}
+                    targetLabel={activePromptTemplate.targetField || "song field"}
+                    defaultSongId={selectedSongId}
+                    onApplied={() => void selectSong(selectedSongId)}
+                  />
+                </div>
+              </details>
+            ) : null}
           </>
         ) : (
           <div className="panel rounded-[1.75rem] p-8 text-center">

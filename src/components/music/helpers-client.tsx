@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Activity, Guitar, Hand, Mic, MicOff, Play, Square, Volume2 } from "lucide-react";
 
+import { CollapsibleCard } from "@/components/collapsible-card";
 import { useAudio } from "@/components/music/audio-provider";
 import { detectPitchAutocorrelation, type PitchDetection } from "@/lib/music/pitch";
 import { playReferencePluck, type PluckInstrument } from "@/lib/music/instrument-synth";
@@ -332,276 +333,287 @@ export function HelpersClient() {
   }
 
   return (
-    <div className="grid animate-fade-up gap-4 xl:grid-cols-2">
-      <div className={`panel glass-shine space-y-6 rounded-[1.75rem] p-5 transition ${accentFlash ? "ring-2 ring-[var(--color-mint)]/40" : ""}`}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="glass-pill p-2 text-[var(--color-mint)]">
-              <Activity className="h-4 w-4" />
-            </div>
-            <div>
-              <div className="eyebrow">Timing</div>
-              <h3 className="text-lg font-black uppercase tracking-tight">Pro Metronome</h3>
-            </div>
-          </div>
+    <div className="grid animate-fade-up gap-6 xl:grid-cols-2">
+      {/* 1. Pro Metronome (Important: Open by default) */}
+      <CollapsibleCard
+        defaultOpen={true}
+        title="Pro Metronome & Tap Tempo"
+        subtitle={`${bpm} BPM · ${timeSignature} time · Subdivision ${subdivision === 1 ? "Quarter" : subdivision === 2 ? "Eighths" : "Sixteenths"}`}
+        eyebrow="Timing Precision"
+        icon={<Activity className="h-5 w-5 text-[var(--color-mint)]" />}
+        badge={
           <div className={`h-2.5 w-2.5 rounded-full ${isPlaying ? "bg-[var(--color-mint)] shadow-[0_0_10px_var(--color-mint)]" : "bg-zinc-700"}`} />
-        </div>
+        }
+        headerActions={
+          <button
+            type="button"
+            onClick={() => setIsPlaying(!isPlaying)}
+            className={`glass-pill px-3.5 py-1 text-[10px] font-black uppercase tracking-widest ${
+              isPlaying ? "bg-red-500 text-white" : "bg-[var(--color-mint)] text-black"
+            }`}
+          >
+            {isPlaying ? "Stop" : "Start"}
+          </button>
+        }
+      >
+        <div className="space-y-5">
+          <div className="flex flex-col items-center gap-4 py-2">
+            <div className="flex items-baseline gap-2 text-6xl font-black tabular-nums tracking-tighter text-[var(--color-foreground)]">
+              {bpm}
+              <span className="text-sm font-bold text-[var(--color-sand-2)]">BPM</span>
+            </div>
 
-        <div className="flex flex-col items-center gap-4 py-2">
-          <div className="flex items-baseline gap-2 text-6xl font-black tabular-nums tracking-tighter">
-            {bpm}
-            <span className="text-sm font-bold text-[var(--color-sand-2)]">BPM</span>
-          </div>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <label className="field-group">
+                <span className="field-label">Signature</span>
+                <select value={timeSignature} onChange={(event) => setTimeSignature(event.target.value as (typeof TIME_SIGNATURES)[number])} className="field py-1.5 text-xs font-bold">
+                  {TIME_SIGNATURES.map((sig) => <option key={sig} value={sig}>{sig}</option>)}
+                </select>
+              </label>
+              <label className="field-group">
+                <span className="field-label">Subdivision</span>
+                <select value={subdivision} onChange={(event) => setSubdivision(Number(event.target.value) as 1 | 2 | 4)} className="field py-1.5 text-xs font-bold">
+                  <option value={1}>Quarter</option>
+                  <option value={2}>Eighths</option>
+                  <option value={4}>Sixteenths</option>
+                </select>
+              </label>
+              <label className="field-group">
+                <span className="field-label">Count-in</span>
+                <select value={countInBars} onChange={(event) => setCountInBars(Number(event.target.value))} className="field py-1.5 text-xs font-bold">
+                  <option value={0}>Off</option>
+                  <option value={1}>1 bar</option>
+                  <option value={2}>2 bars</option>
+                </select>
+              </label>
+            </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            <label className="field-group">
-              <span className="field-label">Signature</span>
-              <select value={timeSignature} onChange={(event) => setTimeSignature(event.target.value as (typeof TIME_SIGNATURES)[number])} className="field py-2">
-                {TIME_SIGNATURES.map((sig) => <option key={sig} value={sig}>{sig}</option>)}
-              </select>
-            </label>
-            <label className="field-group">
-              <span className="field-label">Subdivision</span>
-              <select value={subdivision} onChange={(event) => setSubdivision(Number(event.target.value) as 1 | 2 | 4)} className="field py-2">
-                <option value={1}>Quarter</option>
-                <option value={2}>Eighths</option>
-                <option value={4}>Sixteenths</option>
-              </select>
-            </label>
-            <label className="field-group">
-              <span className="field-label">Count-in</span>
-              <select value={countInBars} onChange={(event) => setCountInBars(Number(event.target.value))} className="field py-2">
-                <option value={0}>Off</option>
-                <option value={1}>1 bar</option>
-                <option value={2}>2 bars</option>
-              </select>
-            </label>
-          </div>
+            <div className="flex gap-1.5">
+              {Array.from({ length: getBeatsPerBar(timeSignature) }, (_, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setIsPlaying(!isPlaying)}
+                  className={`h-2.5 rounded-full transition-all ${isPlaying && beatCount === i ? "w-6 bg-[var(--color-mint)]" : "w-2.5 bg-zinc-700"}`}
+                  aria-label={`Beat ${i + 1}`}
+                />
+              ))}
+            </div>
 
-          <div className="flex gap-1.5">
-            {Array.from({ length: getBeatsPerBar(timeSignature) }, (_, i) => (
+            <div className="grid w-full gap-3 sm:grid-cols-2">
+              <label className="field-group">
+                <span className="field-label">Tempo Slider</span>
+                <input
+                  type="range"
+                  min="40"
+                  max="240"
+                  value={bpm}
+                  onChange={(event) => setBpm(parseInt(event.target.value, 10))}
+                  className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-zinc-800 accent-[var(--color-mint)]"
+                />
+              </label>
+              <label className="field-group">
+                <span className="field-label">Click volume</span>
+                <input
+                  type="range"
+                  min="0.2"
+                  max="1"
+                  step="0.05"
+                  value={clickVolume}
+                  onChange={(event) => setClickVolume(Number(event.target.value))}
+                  className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-zinc-800 accent-[var(--color-mint)]"
+                />
+              </label>
+            </div>
+
+            <div className="flex flex-wrap justify-center gap-1.5">
+              {[40, 60, 80, 100, 120, 140, 160].map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setBpm(preset)}
+                  className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-widest transition ${
+                    bpm === preset
+                      ? "border-[var(--color-mint)] bg-[var(--color-mint)] text-black"
+                      : "border-white/10 opacity-50 hover:opacity-100"
+                  }`}
+                >
+                  {preset}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
               <button
-                key={i}
+                type="button"
+                onClick={handleTapTempo}
+                className="glass-pill px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:border-[var(--color-mint)]"
+              >
+                Tap tempo {tappedBpm ? `· ${tappedBpm} BPM` : ""}
+              </button>
+              <button
                 type="button"
                 onClick={() => setIsPlaying(!isPlaying)}
-                className={`h-2.5 rounded-full transition-all ${isPlaying && beatCount === i ? "w-6 bg-[var(--color-mint)]" : "w-2.5 bg-zinc-700"}`}
-                aria-label={`Beat ${i + 1}`}
-              />
-            ))}
-          </div>
-
-          <div className="grid w-full gap-3 sm:grid-cols-2">
-            <label className="field-group">
-              <span className="field-label">Tempo</span>
-              <input
-                type="range"
-                min="40"
-                max="240"
-                value={bpm}
-                onChange={(event) => setBpm(parseInt(event.target.value, 10))}
-                className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-zinc-800 accent-[var(--color-mint)]"
-              />
-            </label>
-            <label className="field-group">
-              <span className="field-label">Click volume</span>
-              <input
-                type="range"
-                min="0.2"
-                max="1"
-                step="0.05"
-                value={clickVolume}
-                onChange={(event) => setClickVolume(Number(event.target.value))}
-                className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-zinc-800 accent-[var(--color-mint)]"
-              />
-            </label>
-          </div>
-
-          <div className="flex flex-wrap justify-center gap-1.5">
-            {[40, 60, 80, 100, 120, 160].map((preset) => (
-              <button
-                key={preset}
-                type="button"
-                onClick={() => setBpm(preset)}
-                className={`rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-widest transition ${
-                  bpm === preset
-                    ? "border-[var(--color-mint)] bg-[var(--color-mint)] text-black"
-                    : "border-white/10 opacity-50 hover:opacity-100"
+                className={`flex h-16 w-16 items-center justify-center rounded-full transition-all ${
+                  isPlaying
+                    ? "border border-red-500/30 bg-red-500/10 text-red-500"
+                    : "bg-[var(--color-mint)] text-black shadow-lg hover:scale-105"
                 }`}
               >
-                {preset}
+                {isPlaying ? <Square className="h-6 w-6 fill-current" /> : <Play className="ml-1 h-6 w-6 fill-current" />}
               </button>
-            ))}
-          </div>
-
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            <button
-              type="button"
-              onClick={handleTapTempo}
-              className="glass-pill px-4 py-2 text-[10px] font-black uppercase tracking-widest"
-            >
-              Tap tempo {tappedBpm ? `· ${tappedBpm}` : ""}
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsPlaying(!isPlaying)}
-              className={`flex h-20 w-20 items-center justify-center rounded-full transition-all ${
-                isPlaying
-                  ? "border border-red-500/30 bg-red-500/10 text-red-500"
-                  : "bg-[var(--color-mint)] text-black shadow-lg hover:scale-105"
-              }`}
-            >
-              {isPlaying ? <Square className="h-8 w-8 fill-current" /> : <Play className="ml-1 h-8 w-8 fill-current" />}
-            </button>
+            </div>
           </div>
         </div>
-      </div>
+      </CollapsibleCard>
 
-      <div className="panel glass-shine space-y-4 rounded-[1.75rem] p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="glass-pill p-2 text-[var(--color-copper)]">
-              <Hand className="h-4 w-4" />
-            </div>
-            <div>
-              <div className="eyebrow">Pitch lab</div>
-              <h3 className="text-lg font-black uppercase tracking-tight">Intelligent Tuner</h3>
-            </div>
-          </div>
+      {/* 2. Intelligent Tuner (Important: Open by default) */}
+      <CollapsibleCard
+        defaultOpen={true}
+        title="Intelligent Tuner & Pluck Reference"
+        subtitle={`${instrumentMode.toUpperCase()} · ${activeTuning.name} (${activeTuning.strings.length} strings)`}
+        eyebrow="Pitch Precision"
+        icon={<Hand className="h-5 w-5 text-[var(--color-copper)]" />}
+        headerActions={
           <button
             type="button"
             onClick={() => void toggleListening()}
-            className={`glass-pill flex items-center gap-2 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest ${
+            className={`glass-pill flex items-center gap-1.5 px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${
               isListening ? "bg-red-500 text-white" : ""
             }`}
           >
             {isListening ? <MicOff className="h-3 w-3" /> : <Mic className="h-3 w-3" />}
-            {isListening ? "Stop mic" : "Start mic"}
+            {isListening ? "Stop Mic" : "Start Mic"}
           </button>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          {(["guitar", "bass"] as const).map((mode) => (
-            <button
-              key={mode}
-              type="button"
-              onClick={() => setInstrumentMode(mode)}
-              className={`tab-editor-pill inline-flex items-center gap-2 capitalize ${instrumentMode === mode ? "tab-editor-pill-active" : ""}`}
-            >
-              <Guitar className="h-3.5 w-3.5" />
-              {mode}
-            </button>
-          ))}
-        </div>
-
-        {instrumentMode === "bass" ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-brass)]">Strings</span>
-            <button
-              type="button"
-              onClick={() => { setShowExtendedBass(false); setBassStringCount(4); }}
-              className={`tab-editor-pill ${!showExtendedBass ? "tab-editor-pill-active" : ""}`}
-            >
-              4-string
-            </button>
-            <button
-              type="button"
-              onClick={() => { setShowExtendedBass(true); setBassStringCount(5); }}
-              className={`tab-editor-pill ${showExtendedBass && bassStringCount === 5 ? "tab-editor-pill-active" : ""}`}
-            >
-              5-string
-            </button>
-            <button
-              type="button"
-              onClick={() => { setShowExtendedBass(true); setBassStringCount(6); }}
-              className={`tab-editor-pill ${showExtendedBass && bassStringCount === 6 ? "tab-editor-pill-active" : ""}`}
-            >
-              6-string
-            </button>
-          </div>
-        ) : null}
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="field-group">
-            <span className="field-label">Tuning preset</span>
-            <select value={tuningId} onChange={(event) => setTuningId(event.target.value)} className="field py-2 text-sm">
-              {tuningOptions.map((preset: TuningPreset) => (
-                <option key={preset.id} value={preset.id}>{preset.name}</option>
+        }
+      >
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap gap-2">
+              {(["guitar", "bass"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setInstrumentMode(mode)}
+                  className={`tab-editor-pill inline-flex items-center gap-2 capitalize ${instrumentMode === mode ? "tab-editor-pill-active" : ""}`}
+                >
+                  <Guitar className="h-3.5 w-3.5" />
+                  {mode}
+                </button>
               ))}
-            </select>
-          </label>
-          <label className="field-group">
-            <span className="field-label">Reference sound</span>
-            <select
-              value={pluckVoice}
-              onChange={(event) => setPluckVoice(event.target.value as PluckInstrument)}
-              className="field py-2 text-sm"
-            >
-              {instrumentMode === "guitar" ? (
-                <>
-                  <option value="guitar-steel">Steel string pluck</option>
-                  <option value="guitar-nylon">Nylon string pluck</option>
-                </>
-              ) : (
-                <>
-                  <option value="bass">Fingered bass</option>
-                  <option value="bass-pick">Pick bass</option>
-                </>
-              )}
-            </select>
-          </label>
-        </div>
-
-        <div className="relative h-24 w-full overflow-hidden rounded-2xl border border-[var(--color-border)] bg-black/35">
-          <canvas ref={canvasRef} className="h-full w-full" width={400} height={100} />
-          {!isListening ? (
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Visualizer inactive</span>
             </div>
-          ) : null}
-        </div>
 
-        {detectedPitch ? (
-          <div className="modal-inset-panel rounded-2xl px-4 py-4">
-            <div className="flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <div className="text-4xl font-black tracking-tight text-[var(--color-copper)]">{detectedPitch.note}</div>
-                <div className="mt-1 text-xs font-bold uppercase tracking-widest text-[var(--color-sand-2)]">
-                  {detectedPitch.frequency.toFixed(1)} Hz
-                </div>
+            {instrumentMode === "bass" ? (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-brass)]">Strings:</span>
+                <button
+                  type="button"
+                  onClick={() => { setShowExtendedBass(false); setBassStringCount(4); }}
+                  className={`tab-editor-pill py-1 text-[10px] ${!showExtendedBass ? "tab-editor-pill-active" : ""}`}
+                >
+                  4-str
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowExtendedBass(true); setBassStringCount(5); }}
+                  className={`tab-editor-pill py-1 text-[10px] ${showExtendedBass && bassStringCount === 5 ? "tab-editor-pill-active" : ""}`}
+                >
+                  5-str
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowExtendedBass(true); setBassStringCount(6); }}
+                  className={`tab-editor-pill py-1 text-[10px] ${showExtendedBass && bassStringCount === 6 ? "tab-editor-pill-active" : ""}`}
+                >
+                  6-str
+                </button>
               </div>
-              {closestMatch ? (
-                <div className="text-right">
-                  <div className="text-sm font-black">String {closestMatch.string.label}</div>
-                  <div className={`text-xs font-bold uppercase ${tuningStatus(closestMatch.cents).tone}`}>
-                    {tuningStatus(closestMatch.cents).label} · {closestMatch.cents > 0 ? "+" : ""}{closestMatch.cents} cents
+            ) : null}
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="field-group">
+              <span className="field-label">Tuning preset</span>
+              <select value={tuningId} onChange={(event) => setTuningId(event.target.value)} className="field py-1.5 text-xs font-bold">
+                {tuningOptions.map((preset: TuningPreset) => (
+                  <option key={preset.id} value={preset.id}>{preset.name}</option>
+                ))}
+              </select>
+            </label>
+            <label className="field-group">
+              <span className="field-label">Reference sound</span>
+              <select
+                value={pluckVoice}
+                onChange={(event) => setPluckVoice(event.target.value as PluckInstrument)}
+                className="field py-1.5 text-xs font-bold"
+              >
+                {instrumentMode === "guitar" ? (
+                  <>
+                    <option value="guitar-steel">Steel string pluck</option>
+                    <option value="guitar-nylon">Nylon string pluck</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="bass">Fingered bass</option>
+                    <option value="bass-pick">Pick bass</option>
+                  </>
+                )}
+              </select>
+            </label>
+          </div>
+
+          <div className="relative h-20 w-full overflow-hidden rounded-2xl border border-[var(--color-border)] bg-black/35">
+            <canvas ref={canvasRef} className="h-full w-full" width={400} height={80} />
+            {!isListening ? (
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Microphone Inactive</span>
+              </div>
+            ) : null}
+          </div>
+
+          {detectedPitch ? (
+            <div className="modal-inset-panel rounded-2xl p-4">
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <div className="text-4xl font-black tracking-tight text-[var(--color-copper)]">{detectedPitch.note}</div>
+                  <div className="mt-1 text-xs font-bold uppercase tracking-widest text-[var(--color-sand-2)]">
+                    {detectedPitch.frequency.toFixed(1)} Hz
                   </div>
                 </div>
-              ) : null}
+                {closestMatch ? (
+                  <div className="text-right">
+                    <div className="text-sm font-black">String {closestMatch.string.label}</div>
+                    <div className={`text-xs font-bold uppercase ${tuningStatus(closestMatch.cents).tone}`}>
+                      {tuningStatus(closestMatch.cents).label} · {closestMatch.cents > 0 ? "+" : ""}{closestMatch.cents} cents
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+              <div className="tuner-gauge-track mt-4">
+                <div className="tuner-gauge-needle" style={{ left: `${gaugePosition}%` }} />
+              </div>
+              <div className="mt-1 flex justify-between text-[10px] font-bold uppercase tracking-widest text-[var(--color-sand-2)]">
+                <span>Flat</span>
+                <span>In tune</span>
+                <span>Sharp</span>
+              </div>
             </div>
-            <div className="tuner-gauge-track mt-4">
-              <div className="tuner-gauge-needle" style={{ left: `${gaugePosition}%` }} />
+          ) : isListening ? (
+            <div className="text-center text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+              Listening for string pitch...
             </div>
-            <div className="mt-1 flex justify-between text-[10px] font-bold uppercase tracking-widest text-[var(--color-sand-2)]">
-              <span>Flat</span>
-              <span>In tune</span>
-              <span>Sharp</span>
-            </div>
-          </div>
-        ) : isListening ? (
-          <div className="text-center text-[10px] font-bold uppercase tracking-widest text-zinc-500">
-            Listening for pitch...
-          </div>
-        ) : null}
+          ) : null}
 
-        <div>
-          <div className="mb-2 text-[10px] font-black uppercase tracking-widest text-[var(--color-brass)]">
-            {activeTuning.name} · {activeTuning.strings.length} strings · tap for reference tone
-          </div>
-          <div className={`grid gap-2 ${instrumentMode === "bass" ? "sm:grid-cols-2" : "sm:grid-cols-2 lg:grid-cols-3"}`}>
-            {activeTuning.strings.map((tuningString) => renderStringRow(tuningString))}
+          <div>
+            <div className="mb-2 text-[10px] font-black uppercase tracking-widest text-[var(--color-brass)]">
+              {activeTuning.name} · {activeTuning.strings.length} strings (tap to hear reference)
+            </div>
+            <div className={`grid gap-2 ${instrumentMode === "bass" ? "sm:grid-cols-2" : "sm:grid-cols-2 lg:grid-cols-3"}`}>
+              {activeTuning.strings.map((tuningString) => renderStringRow(tuningString))}
+            </div>
           </div>
         </div>
-      </div>
+      </CollapsibleCard>
     </div>
   );
 }

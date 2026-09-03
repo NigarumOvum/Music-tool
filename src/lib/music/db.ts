@@ -1,8 +1,12 @@
 import { createClient } from "@libsql/client";
 
 import type {
+  MusicCollaboratorUser,
   MusicPartRecord,
   MusicPartitureRecord,
+  MusicProjectDraftInput,
+  MusicProjectMemberRecord,
+  MusicProjectRecord,
   MusicSongDetail,
   MusicSongDraftInput,
   MusicSongRecord,
@@ -350,6 +354,41 @@ async function ensureMusicSupportTables() {
     ON song_partitures (user_id, song_id, instrument, slot)
   `);
 
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS projects (
+      id text PRIMARY KEY NOT NULL,
+      user_id text NOT NULL,
+      name text NOT NULL,
+      slug text NOT NULL,
+      description text,
+      color text,
+      is_shared_with_all integer NOT NULL DEFAULT 1,
+      created_at text NOT NULL,
+      updated_at text NOT NULL
+    )
+  `);
+  await db.execute(`
+    CREATE INDEX IF NOT EXISTS projects_user_idx
+    ON projects (user_id, slug)
+  `);
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS project_members (
+      id text PRIMARY KEY NOT NULL,
+      project_id text NOT NULL,
+      user_id text NOT NULL,
+      role text NOT NULL DEFAULT 'editor',
+      created_at text NOT NULL
+    )
+  `);
+  await db.execute(`
+    CREATE INDEX IF NOT EXISTS project_members_idx
+    ON project_members (project_id, user_id)
+  `);
+
+  await ensureColumn("projects", "is_shared_with_all", "integer NOT NULL DEFAULT 1");
+  await ensureColumn("projects", "color", "text");
+
   supportTablesReady = true;
 }
 
@@ -357,7 +396,7 @@ async function requireOwnedSong(songId: string, userId: string) {
   await ensureMusicSupportTables();
   const db = getMusicClient();
   const result = await db.execute({
-    sql: "select id from songs where id = ? and user_id = ? limit 1",
+    sql: "select id from songs where id = ? and (user_id = ? or (project_slug is not null and project_slug != '')) limit 1",
     args: [songId, userId],
   });
 
@@ -389,7 +428,10 @@ export async function listSongs(userId: string, search?: string) {
       (select count(*) from song_sections where song_sections.song_id = songs.id) as section_count,
       (select count(*) from song_layers where song_layers.song_id = songs.id) as layer_count
     from songs
-    where songs.user_id = ?
+    where (
+      songs.user_id = ?
+      or (songs.project_slug is not null and songs.project_slug != '')
+    )
   `;
   const args: string[] = [userId];
 
@@ -399,11 +441,12 @@ export async function listSongs(userId: string, search?: string) {
         songs.title like ? or
         coalesce(songs.topic, '') like ? or
         coalesce(songs.genre, '') like ? or
-        coalesce(songs.language, '') like ?
+        coalesce(songs.language, '') like ? or
+        coalesce(songs.project_slug, '') like ?
       )
     `;
     const searchValue = `%${normalizedSearch}%`;
-    args.push(searchValue, searchValue, searchValue, searchValue);
+    args.push(searchValue, searchValue, searchValue, searchValue, searchValue);
   }
 
   sql += " order by coalesce(songs.saved_at, songs.synced_at) desc, songs.title asc";
@@ -432,7 +475,10 @@ export async function listSongs(userId: string, search?: string) {
 export async function getSongDetail(id: string, userId: string) {
   await ensureMusicSupportTables();
   const db = getMusicClient();
-  const songResult = await db.execute({ sql: "select * from songs where id = ? and user_id = ? limit 1", args: [id, userId] });
+  const songResult = await db.execute({
+    sql: "select * from songs where id = ? and (user_id = ? or (project_slug is not null and project_slug != '')) limit 1",
+    args: [id, userId],
+  });
   const songRow = songResult.rows[0];
   if (!songRow) {
     return null;
@@ -592,7 +638,7 @@ export async function updateSong(id: string, userId: string, updates: Record<str
   args.push(id);
 
   const result = await db.execute({
-    sql: `update songs set ${assignments.join(", ")} where user_id = ? and id = ?`,
+    sql: `update songs set ${assignments.join(", ")} where (user_id = ? or (project_slug is not null and project_slug != '')) and id = ?`,
     args,
   });
 
@@ -619,8 +665,8 @@ export async function deleteSong(id: string, userId: string) {
 
   await db.execute({ sql: "delete from song_sections where song_id = ?", args: [id] });
   await db.execute({ sql: "delete from song_layers where song_id = ?", args: [id] });
-  await db.execute({ sql: "delete from song_partitures where song_id = ? and user_id = ?", args: [id, userId] });
-  await db.execute({ sql: "delete from songs where id = ? and user_id = ?", args: [id, userId] });
+  await db.execute({ sql: "delete from song_partitures where song_id = ?", args: [id] });
+  await db.execute({ sql: "delete from songs where id = ?", args: [id] });
 }
 
 export async function upsertSongPart(
@@ -1033,4 +1079,205 @@ export async function deleteSongPartiture(partitureId: string, userId: string) {
   if ((result.rowsAffected ?? 0) === 0) {
     throw new Error("Partiture not found");
   }
+}
+
+function slugifyProjectName(name: string): string {
+  const slug = name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/[\s_]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || `project-${Date.now().toString(36)}`;
+}
+
+export async function listCollaboratorUsers(): Promise<MusicCollaboratorUser[]> {
+  await ensureMusicSupportTables();
+  const db = getMusicClient();
+  try {
+    const result = await db.execute("select id, email, name from app_user order by coalesce(name, email) asc");
+    return result.rows.map((row) => ({
+      id: String(row.id),
+      email: String(row.email),
+      name: (row.name as string | null) ?? null,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export async function listProjects(userId: string): Promise<MusicProjectRecord[]> {
+  await ensureMusicSupportTables();
+  const db = getMusicClient();
+
+  const [projectsResult, membersResult, countsResult, usersResult] = await Promise.all([
+    db.execute({
+      sql: `
+        select * from projects
+        where user_id = ?
+           or is_shared_with_all = 1
+           or id in (select project_id from project_members where user_id = ?)
+        order by name asc
+      `,
+      args: [userId, userId],
+    }),
+    db.execute("select * from project_members"),
+    db.execute("select project_slug, count(*) as count from songs where project_slug is not null and project_slug != '' group by project_slug"),
+    listCollaboratorUsers(),
+  ]);
+
+  const userMap = new Map<string, MusicCollaboratorUser>(usersResult.map((u) => [u.id, u]));
+  const songCounts = new Map<string, number>();
+  for (const row of countsResult.rows) {
+    const slug = String(row.project_slug);
+    songCounts.set(slug, Number(row.count ?? 0));
+  }
+
+  const membersByProject = new Map<string, MusicProjectMemberRecord[]>();
+  for (const row of membersResult.rows) {
+    const pId = String(row.project_id);
+    const mUserId = String(row.user_id);
+    const u = userMap.get(mUserId);
+    const member: MusicProjectMemberRecord = {
+      id: String(row.id),
+      projectId: pId,
+      userId: mUserId,
+      userName: u?.name ?? null,
+      userEmail: u?.email ?? "",
+      role: (row.role as "owner" | "editor" | "viewer") || "editor",
+      createdAt: String(row.created_at || ""),
+    };
+    const list = membersByProject.get(pId) || [];
+    list.push(member);
+    membersByProject.set(pId, list);
+  }
+
+  return projectsResult.rows.map((row) => {
+    const pId = String(row.id);
+    const slug = String(row.slug);
+    const members = membersByProject.get(pId) || [];
+    return {
+      id: pId,
+      userId: String(row.user_id),
+      name: String(row.name),
+      slug,
+      description: (row.description as string | null) ?? null,
+      color: (row.color as string | null) ?? null,
+      isSharedWithAll: Number(row.is_shared_with_all ?? 1) === 1,
+      memberCount: members.length,
+      songCount: songCounts.get(slug) || 0,
+      members,
+      createdAt: String(row.created_at || ""),
+      updatedAt: String(row.updated_at || ""),
+    };
+  });
+}
+
+export async function getProject(id: string, userId: string): Promise<MusicProjectRecord | null> {
+  const projects = await listProjects(userId);
+  return projects.find((p) => p.id === id || p.slug === id) || null;
+}
+
+export async function createProject(userId: string, input: MusicProjectDraftInput): Promise<MusicProjectRecord> {
+  await ensureMusicSupportTables();
+  const db = getMusicClient();
+  const now = isoNow();
+  const id = crypto.randomUUID();
+  const name = (input.name || "Untitled Band / Project").trim();
+  const slug = input.slug?.trim() || slugifyProjectName(name);
+  const description = normalizeText(input.description);
+  const color = normalizeText(input.color) || "#f59e0b";
+  const isSharedWithAll = input.isSharedWithAll !== false ? 1 : 0;
+
+  await db.execute({
+    sql: `
+      insert into projects (id, user_id, name, slug, description, color, is_shared_with_all, created_at, updated_at)
+      values (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `,
+    args: [id, userId, name, slug, description, color, isSharedWithAll, now, now],
+  });
+
+  // Add owner as member
+  await db.execute({
+    sql: "insert into project_members (id, project_id, user_id, role, created_at) values (?, ?, ?, 'owner', ?)",
+    args: [crypto.randomUUID(), id, userId, now],
+  });
+
+  // Add other selected members
+  if (Array.isArray(input.memberUserIds)) {
+    for (const memberId of input.memberUserIds) {
+      if (memberId && memberId !== userId) {
+        await db.execute({
+          sql: "insert into project_members (id, project_id, user_id, role, created_at) values (?, ?, ?, 'editor', ?)",
+          args: [crypto.randomUUID(), id, memberId, now],
+        });
+      }
+    }
+  }
+
+  const project = await getProject(id, userId);
+  if (!project) {
+    throw new Error("Failed to create project");
+  }
+  return project;
+}
+
+export async function updateProject(id: string, userId: string, input: MusicProjectDraftInput): Promise<MusicProjectRecord> {
+  await ensureMusicSupportTables();
+  const db = getMusicClient();
+  const existing = await getProject(id, userId);
+  if (!existing) {
+    throw new Error("Project not found");
+  }
+
+  const now = isoNow();
+  const name = (input.name || existing.name).trim();
+  const slug = input.slug?.trim() || existing.slug;
+  const description = input.description !== undefined ? normalizeText(input.description) : existing.description;
+  const color = input.color !== undefined ? normalizeText(input.color) : existing.color;
+  const isSharedWithAll = input.isSharedWithAll !== undefined ? (input.isSharedWithAll ? 1 : 0) : (existing.isSharedWithAll ? 1 : 0);
+
+  await db.execute({
+    sql: `
+      update projects
+      set name = ?, slug = ?, description = ?, color = ?, is_shared_with_all = ?, updated_at = ?
+      where id = ?
+    `,
+    args: [name, slug, description, color, isSharedWithAll, now, existing.id],
+  });
+
+  if (Array.isArray(input.memberUserIds)) {
+    await db.execute({ sql: "delete from project_members where project_id = ?", args: [existing.id] });
+    // Keep owner
+    await db.execute({
+      sql: "insert into project_members (id, project_id, user_id, role, created_at) values (?, ?, ?, 'owner', ?)",
+      args: [crypto.randomUUID(), existing.id, existing.userId, now],
+    });
+    for (const memberId of input.memberUserIds) {
+      if (memberId && memberId !== existing.userId) {
+        await db.execute({
+          sql: "insert into project_members (id, project_id, user_id, role, created_at) values (?, ?, ?, 'editor', ?)",
+          args: [crypto.randomUUID(), existing.id, memberId, now],
+        });
+      }
+    }
+  }
+
+  const updated = await getProject(existing.id, userId);
+  if (!updated) {
+    throw new Error("Project not found");
+  }
+  return updated;
+}
+
+export async function deleteProject(id: string, userId: string): Promise<void> {
+  await ensureMusicSupportTables();
+  const db = getMusicClient();
+  const existing = await getProject(id, userId);
+  if (!existing) {
+    throw new Error("Project not found");
+  }
+
+  await db.execute({ sql: "delete from project_members where project_id = ?", args: [existing.id] });
+  await db.execute({ sql: "delete from projects where id = ?", args: [existing.id] });
 }

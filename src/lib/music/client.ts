@@ -1,5 +1,8 @@
 import type {
+  MusicCollaboratorUser,
   MusicPartitureRecord,
+  MusicProjectDraftInput,
+  MusicProjectRecord,
   MusicSongDetail,
   MusicSongSummary,
   MusicTaskTemplateRecord,
@@ -64,6 +67,38 @@ export function deleteSongPart(id: string, payload: Record<string, unknown>) {
     method: "DELETE",
     body: JSON.stringify(payload),
   });
+}
+
+export function fetchProjects() {
+  return requestJson<{ projects: MusicProjectRecord[] }>("/api/music/projects");
+}
+
+export function fetchProjectDetail(id: string) {
+  return requestJson<{ project: MusicProjectRecord }>(`/api/music/projects/${id}`);
+}
+
+export function createProject(payload: MusicProjectDraftInput) {
+  return requestJson<{ project: MusicProjectRecord }>("/api/music/projects", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateProject(id: string, payload: MusicProjectDraftInput) {
+  return requestJson<{ project: MusicProjectRecord }>(`/api/music/projects/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteProject(id: string) {
+  return requestJson<{ ok: true }>(`/api/music/projects/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export function fetchCollaborators() {
+  return requestJson<{ users: MusicCollaboratorUser[] }>("/api/music/collaborators");
 }
 
 export function fetchTemplates() {
