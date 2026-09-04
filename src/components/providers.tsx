@@ -6,8 +6,8 @@ import { HeroUIProvider } from "@heroui/react";
 import { Toaster } from "sonner";
 
 import { ThemeProvider, useTheme } from "@/components/theme-provider";
-
 import { AudioProvider } from "@/components/music/audio-provider";
+import { PWAOfflineIndicator } from "@/components/pwa/pwa-offline-indicator";
 
 function ProviderContent({ children }: { children: ReactNode }) {
   const { theme } = useTheme();
@@ -17,6 +17,7 @@ function ProviderContent({ children }: { children: ReactNode }) {
       <AudioProvider>
         {children}
       </AudioProvider>
+      <PWAOfflineIndicator />
       <Toaster theme={theme} richColors position="top-right" />
     </HeroUIProvider>
   );

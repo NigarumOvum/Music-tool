@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { AppNavLinks, type AppNavIconId } from "@/components/app-nav-links";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { PWAInstallButton } from "@/components/pwa/pwa-install-button";
 import { ensureUserCanAccessPage, requireCurrentUser } from "@/lib/auth";
 import type { ManagedPageKey } from "@/lib/access";
 import { canAccessMusicToolkit, canAccessProductionStudio } from "@/lib/hub-access";
@@ -79,6 +80,7 @@ export async function AppShell({ title, eyebrow, description, children, aside, p
                 </div>
               </Link>
               <div className="flex items-center gap-2 xl:hidden">
+                <PWAInstallButton />
                 <ThemeToggle />
                 <LogoutButton />
               </div>
@@ -89,6 +91,7 @@ export async function AppShell({ title, eyebrow, description, children, aside, p
             </nav>
 
             <div className="hidden items-center gap-2 xl:flex">
+              <PWAInstallButton />
               <Link 
                 href="/account"
                 className="glass-pill inline-flex rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-sand-2)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-surface-strong)] transition-colors"
