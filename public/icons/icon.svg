@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#8b5cf6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4c1d95;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="note" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#e9d5ff;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+  <g transform="translate(128, 112)">
+    <path d="M200 20 L200 220 C200 242 182 260 160 260 C138 260 120 242 120 220 C120 198 138 180 160 180 C166.8 180 173.3 181.7 179.3 184.8 L180 60 L72 92 L72 300 C72 322 54 340 32 340 C10 340 -8 322 -8 300 C-8 278 10 260 32 260 C38.8 260 45.3 261.7 51.3 264.8 L52 140 L208 96 L208 20 Z" fill="url(#note)"/>
+    <rect x="24" y="340" width="208" height="12" rx="6" fill="#ffffff" opacity="0.9"/>
+    <rect x="56" y="364" width="144" height="10" rx="5" fill="#ffffff" opacity="0.7"/>
+    <rect x="88" y="386" width="80" height="8" rx="4" fill="#ffffff" opacity="0.5"/>
+  </g>
+</svg>
