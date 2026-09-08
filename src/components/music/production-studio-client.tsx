@@ -17,6 +17,7 @@ import {
   Globe2,
   Music2,
   X,
+  FolderInput,
 } from "lucide-react";
 import { Spinner } from "@heroui/react";
 import { toast } from "sonner";
@@ -33,6 +34,7 @@ import {
   fetchProjects,
   createSong,
   deleteSong,
+  updateSong,
 } from "@/lib/music/client";
 import type { ProductionStudioTabId } from "@/lib/hub-access";
 import type { MusicSongSummary, MusicProjectRecord } from "@/lib/music/types";
@@ -61,6 +63,11 @@ function ProductionStudioDashboard() {
   const [isBandModalOpen, setIsBandModalOpen] = useState(false);
   const [projectToEdit, setProjectToEdit] = useState<MusicProjectRecord | null>(null);
   const [isNewSongModalOpen, setIsNewSongModalOpen] = useState(false);
+
+  // Move song to band state
+  const [moveSongTarget, setMoveSongTarget] = useState<MusicSongSummary | null>(null);
+  const [moveSongSlug, setMoveSongSlug] = useState("");
+  const [movingSong, setMovingSong] = useState(false);
 
   // New Song Draft State
   const [newSongTitle, setNewSongTitle] = useState("");
@@ -177,6 +184,31 @@ function ProductionStudioDashboard() {
       await refreshSongs();
     } catch (err) {
       toast.error((err as Error).message || "Failed to delete song");
+    }
+  };
+
+  const openMoveModal = (song: MusicSongSummary) => {
+    setMoveSongTarget(song);
+    setMoveSongSlug(song.project_slug || "");
+  };
+
+  const handleMoveSong = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!moveSongTarget) return;
+    setMovingSong(true);
+    try {
+      await updateSong(moveSongTarget.id, { project_slug: moveSongSlug || null });
+      const destination = moveSongSlug
+        ? (projects.find((p) => p.slug === moveSongSlug)?.name ?? moveSongSlug)
+        : "Solo (No Band)";
+      toast.success(`"${moveSongTarget.title}" moved to ${destination}`);
+      setMoveSongTarget(null);
+      await loadData();
+      await refreshSongs();
+    } catch (err) {
+      toast.error((err as Error).message || "Failed to move song");
+    } finally {
+      setMovingSong(false);
     }
   };
 
@@ -426,6 +458,14 @@ function ProductionStudioDashboard() {
                       </button>
                       <button
                         type="button"
+                        onClick={() => openMoveModal(song)}
+                        title="Move to another band / project"
+                        className="flex h-8 w-8 items-center justify-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-sand-2)] transition hover:border-[var(--color-brass)]/40 hover:text-[var(--color-brass)]"
+                      >
+                        <FolderInput className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => handleDeleteSong(song.id, song.title)}
                         title="Delete song"
                         className="flex h-8 w-8 items-center justify-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-sand-2)] transition hover:border-red-500/30 hover:text-red-500"
@@ -525,7 +565,99 @@ function ProductionStudioDashboard() {
         }}
       />
 
-      {/* 6. Quick New Song Modal */}
+      {/* 6. Move Song to Band Modal */}
+      <AnimatePresence>
+        {moveSongTarget && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setMoveSongTarget(null)}
+              className="fixed inset-0 bg-black/75 backdrop-blur-md"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 14 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 14 }}
+              transition={{ type: "spring", stiffness: 350, damping: 28 }}
+              className="relative z-10 w-full max-w-md overflow-hidden rounded-[1.75rem] border border-[var(--color-border)] bg-[var(--color-modal-surface)] shadow-2xl"
+            >
+              <div className="flex items-center justify-between border-b border-[var(--color-stroke)] px-6 py-5">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--color-brass)] text-black shadow-md">
+                    <FolderInput className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="eyebrow text-[0.62rem]">Move Track</div>
+                    <h2 className="text-lg font-bold tracking-tight text-[var(--color-foreground)]">
+                      Move to Band / Project
+                    </h2>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMoveSongTarget(null)}
+                  className="flex h-8 w-8 items-center justify-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-sand-2)] transition hover:text-[var(--color-foreground)]"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleMoveSong} className="space-y-4 p-6">
+                <p className="text-sm text-[var(--color-sand-2)]">
+                  Moving{" "}
+                  <span className="font-bold text-[var(--color-foreground)]">
+                    &quot;{moveSongTarget.title}&quot;
+                  </span>{" "}
+                  from{" "}
+                  <span className="font-semibold text-[var(--color-brass)]">
+                    {moveSongTarget.project_slug
+                      ? (projects.find((p) => p.slug === moveSongTarget.project_slug)?.name ?? moveSongTarget.project_slug)
+                      : "Solo (No Band)"}
+                  </span>
+                </p>
+
+                <div className="space-y-1.5">
+                  <label className="field-label">Destination Band / Project</label>
+                  <select
+                    className="field text-sm"
+                    value={moveSongSlug}
+                    onChange={(e) => setMoveSongSlug(e.target.value)}
+                  >
+                    <option value="">Solo (No Band)</option>
+                    {projects.map((p) => (
+                      <option key={p.id} value={p.slug}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex items-center justify-end gap-2.5 border-t border-[var(--color-stroke)] pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setMoveSongTarget(null)}
+                    className="rounded-xl border border-[var(--color-border)] px-4 py-2 text-xs font-semibold text-[var(--color-sand-2)] transition hover:text-[var(--color-foreground)]"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={movingSong || moveSongSlug === (moveSongTarget.project_slug ?? "")}
+                    className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[var(--color-brass)] to-[var(--color-gold)] px-5 py-2 text-xs font-bold text-black shadow-md transition hover:brightness-110 active:scale-95 disabled:opacity-50"
+                  >
+                    {movingSong ? <Spinner size="sm" color="current" /> : <FolderInput className="h-3.5 w-3.5" />}
+                    <span>Move Track</span>
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* 7. Quick New Song Modal */}
       <AnimatePresence>
         {isNewSongModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">

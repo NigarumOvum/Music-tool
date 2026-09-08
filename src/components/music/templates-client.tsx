@@ -3,13 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { Button, Chip, Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, Spinner, useDisclosure } from "@heroui/react";
-import { ChevronRight, Pencil, Plus, Save, Trash2, X, Sparkles, BookOpen } from "lucide-react";
+import { ChevronRight, Copy, Pencil, Plus, Save, Trash2, X, Sparkles, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 
 import { CollapsibleCard } from "@/components/collapsible-card";
 import { createTemplate, deleteTemplate, fetchTemplates, updateTemplate } from "@/lib/music/client";
 import type { MusicTaskTemplateRecord, MusicTemplateTargetType } from "@/lib/music/types";
-import { PromptRunnerPanel } from "@/components/music/prompt-runner-panel";
 import { opaqueModalProps } from "@/lib/ui/modal-styles";
 
 type TemplateDraft = {
@@ -406,13 +405,15 @@ export function TemplatesClient({
                 </div>
               ) : null}
               {filteredTemplates.map((template) => (
-                <button
+                <div
                   key={template.id}
-                  type="button"
-                  onClick={() => openTemplate(template)}
-                  className="group flex w-full items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-soft)]/50 p-3 text-left transition hover:border-[var(--color-info-border)] hover:bg-[var(--color-info-surface)]"
+                  className="group flex w-full items-center gap-2 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-soft)]/50 p-3 transition hover:border-[var(--color-info-border)] hover:bg-[var(--color-info-surface)]"
                 >
-                  <div className="min-w-0 flex-1">
+                  <button
+                    type="button"
+                    onClick={() => openTemplate(template)}
+                    className="min-w-0 flex-1 text-left"
+                  >
                     <div className="truncate text-sm font-bold text-[var(--color-foreground)]">{template.name}</div>
                     <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-[var(--color-sand-2)]">
                       {template.genre ? <span className="font-semibold text-[var(--color-brass)]">{template.genre}</span> : null}
@@ -420,9 +421,31 @@ export function TemplatesClient({
                       {template.category ? <span>{template.category}</span> : null}
                       {!template.genre && !template.category ? <span>{template.targetType}</span> : null}
                     </div>
-                  </div>
-                  <ChevronRight className="h-4 w-4 shrink-0 text-[var(--color-sand-2)] transition group-hover:text-[var(--color-foreground)] group-hover:translate-x-0.5" />
-                </button>
+                  </button>
+                  <button
+                    type="button"
+                    title="Copy prompt instructions"
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      try {
+                        await navigator.clipboard.writeText(template.instructions);
+                        toast.success("Prompt copied");
+                      } catch {
+                        toast.error("Clipboard unavailable");
+                      }
+                    }}
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-sand-2)] opacity-0 transition group-hover:opacity-100 hover:border-[var(--color-info-border)] hover:text-[var(--color-foreground)]"
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openTemplate(template)}
+                    className="flex h-7 w-7 shrink-0 items-center justify-center text-[var(--color-sand-2)] transition group-hover:translate-x-0.5 group-hover:text-[var(--color-foreground)]"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
               ))}
             </div>
           )}
@@ -563,14 +586,6 @@ export function TemplatesClient({
                     <span className="font-semibold uppercase tracking-[0.14em] text-[var(--color-brass)]">Updated</span>
                     <p className="mt-1">{formatTimestamp(selectedTemplate.updatedAt)}</p>
                   </div>
-                </div>
-
-                <div className="modal-inset-panel rounded-[1rem] p-4">
-                  <PromptRunnerPanel
-                    templateId={selectedTemplate.id}
-                    templateName={selectedTemplate.name}
-                    targetLabel={selectedTemplate.targetField || selectedTemplate.targetType}
-                  />
                 </div>
               </ModalBody>
               <ModalFooter>
